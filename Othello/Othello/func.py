@@ -10,6 +10,8 @@ board_size = 4
 # オセロ開始
 def paly_Othello():
     ret = True
+    a = ["a", "b", "c", "d"]
+    b = [1, 2, 3, 4]
 
     # デッキ作成
     board_l = set_board()
@@ -25,11 +27,13 @@ def paly_Othello():
         while (a_ret == 0):
             # 駒が打てるか確認
             pieces = board_check(board_l, 0)
-            print(pieces)
+            print("Enterable point :{0}" .format(pieces))
             if(0 < pieces):
-
+                skip = 0
                 # プレイヤーのアクション選択
-                action = input("< Your(○) turn. Please enter. (ex. [a,1]) >\n")
+                # action = input("< Your(○) turn. Please enter. (ex. [a,1]) >\n")
+                action = ("{0},{1}" .format(
+                    random.choice(a), random.choice(b)))
 
                 # 入力変換
                 act_l = action_chg(action)
@@ -37,11 +41,11 @@ def paly_Othello():
                 # 入力チェック(自分)
                 a_ret = action_check(board_l, act_l, 0)
                 if (a_ret == 0):
-                    print("< Your input is incorrect >")
+                    print("< input is incorrect >")
             else:
                 print("< You will be skipped. >")
                 skip += 1
-                break;
+                break
 
         # デッキ表示
         display_board(board_l)
@@ -51,12 +55,14 @@ def paly_Othello():
         while(a_ret == 0):
             # 駒が打てるか確認
             pieces = board_check(board_l, 1)
-            print(pieces)
+            print("Enterable point :{0}" .format(pieces))
             if(0 < pieces):
-
-
-                # プレイヤーのアクション選択
-                action = input("< Computer(●) turn. Please enter. (ex. [a,1]) >\n")
+                skip = 0
+                # コンピューターのアクション選択
+                action = ("{0},{1}" .format(
+                    random.choice(a), random.choice(b)))
+                # action = input(
+                #     "< Computer(●) turn. Please enter. (ex. [a,1]) >\n")
 
                 # 入力変換
                 act_l = action_chg(action)
@@ -64,19 +70,20 @@ def paly_Othello():
                 # 入力チェック(コンピューター)
                 a_ret = action_check(board_l, act_l, 1)
                 if (a_ret == 0):
-                    print("< Your input is incorrect >")
+                    print("< input is incorrect >")
             else:
                 print("< Computer will be skipped. >")
                 skip += 1
-                break;
+                break
 
         if (2 <= skip):
             break
 
-    print("< Game end. >")
-
     # デッキ表示
     display_board(board_l)
+
+    # 結果表示
+    display_result(board_l)
 
     return(ret)
 
@@ -126,6 +133,7 @@ def action_chg(act):
     a_l = []
 
     # 入力文字列をリスト格納
+    print(act)
     a_l = re.split(',', act)
     # 行変換
     if (a_l[0] == "a"):
@@ -140,7 +148,11 @@ def action_chg(act):
         a_l[0] = board_size + 1
 
     # 列変換
-    a_l[1] = int(a_l[1])
+    # 文字列が十進数かどうかチェック
+    if(str.isdecimal(a_l[1])):
+        a_l[1] = int(a_l[1])
+    else:
+        a_l[0] = board_size + 1
 
     return a_l
 
@@ -149,6 +161,7 @@ def action_chg(act):
 
 def board_check(board_l, pinpon):
     pieces = 0
+    hit_num = 0
 
     b_l = [[-1, -1], [0, -1], [1, -1], [-1, 0],
            [1, 0], [-1, 1], [0, 1], [1, 1]]
@@ -166,6 +179,7 @@ def board_check(board_l, pinpon):
             if (board_l[a_l[1]][a_l[0]] != 0):
                 continue
 
+            hit = 0
             # 周囲に相手の駒がいるかチェック
             for i in range(len(b_l)):
                 line = a_l[1] + b_l[i][0]
@@ -185,17 +199,20 @@ def board_check(board_l, pinpon):
                         # 反対側に自分の駒がいた場合
                         elif (board_l[line][col] == p_l[pinpon][0]):
 
-                            # 駒をひっくり返す
-                            for k in range(board_size):
-                                line -= b_l[i][0]
-                                col -= b_l[i][1]
+                            hit = 1
+                            break
+                            # # 駒をひっくり返す
+                            # for k in range(board_size):
+                            #     line -= b_l[i][0]
+                            #     col -= b_l[i][1]
 
-                                if (board_l[line][col] == p_l[pinpon][1]):
-                                    pieces += 1
-                                else:
-                                    break
+                            #     if (board_l[line][col] == p_l[pinpon][1]):
+                            #         pass
+                            #     else:
+                            #         break
+            hit_num += hit
 
-    return pieces
+    return hit_num
 
 
 # ------------------------------------------------------------------------------
@@ -251,3 +268,33 @@ def action_check(board_l, a_l, pinpon):
         board_l[a_l[1]][a_l[0]] = p_l[pinpon][0]
 
     return pieces
+
+
+# ------------------------------------------------------------------------------
+def display_result(d_l):
+
+    ret = 0
+
+    p1 = 0
+    p2 = 0
+
+    for i in range(board_size):
+
+        for j in range(board_size):
+
+            if (d_l[i + 1][j + 1] == 1):
+                p1 += 1
+            elif (d_l[i + 1][j + 1] == 2):
+                p2 += 1
+
+    if (p2 < p1):
+        ret = 2
+        print("You are Win!")
+    elif (p1 < p2):
+        print("You are lose..")
+        ret = 1
+    else:
+        print("Draw..")
+        ret = 0
+
+    return (ret)
