@@ -10,8 +10,6 @@ board_size = 4
 # オセロ開始
 def paly_Othello():
     ret = True
-    a = ["a", "b", "c", "d"]
-    b = [1, 2, 3, 4]
 
     # デッキ作成
     board_l = set_board()
@@ -23,58 +21,36 @@ def paly_Othello():
         display_board(board_l)
 
         # プレイヤーのターン
-        a_ret = 0
-        while (a_ret == 0):
-            # 駒が打てるか確認
-            pieces = board_check(board_l, 0)
-            print("Enterable point :{0}" .format(pieces))
-            if(0 < pieces):
-                skip = 0
-                # プレイヤーのアクション選択
-                # action = input("< Your(○) turn. Please enter. (ex. [a,1]) >\n")
-                action = ("{0},{1}" .format(
-                    random.choice(a), random.choice(b)))
+        # 駒が打てるか確認
+        pieces = board_check(board_l, 0)
+        print("Enterable point :{0}" .format(pieces))
+        if(0 < pieces):
+            skip = 0
+            # プレイヤーのアクション選択
+            a_ret = p_action(board_l, 0, 11)
 
-                # 入力変換
-                act_l = action_chg(action)
-
-                # 入力チェック(自分)
-                a_ret = action_check(board_l, act_l, 0)
-                if (a_ret == 0):
-                    print("< input is incorrect >")
-            else:
-                print("< You will be skipped. >")
-                skip += 1
-                break
+        else:
+            print("< You will be skipped. >")
+            skip += 1
+            break
 
         # デッキ表示
         display_board(board_l)
 
         # コンピューターのターン
-        a_ret = 0
-        while(a_ret == 0):
-            # 駒が打てるか確認
-            pieces = board_check(board_l, 1)
-            print("Enterable point :{0}" .format(pieces))
-            if(0 < pieces):
-                skip = 0
-                # コンピューターのアクション選択
-                action = ("{0},{1}" .format(
-                    random.choice(a), random.choice(b)))
-                # action = input(
-                #     "< Computer(●) turn. Please enter. (ex. [a,1]) >\n")
+        # 駒が打てるか確認
+        pieces = board_check(board_l, 1)
+        print("Enterable point :{0}" .format(pieces))
+        if(0 < pieces):
+            skip = 0
+            # コンピューターのアクション選択
+            # プレイヤーのアクション選択
+            a_ret = p_action(board_l, 1, 10)
 
-                # 入力変換
-                act_l = action_chg(action)
-
-                # 入力チェック(コンピューター)
-                a_ret = action_check(board_l, act_l, 1)
-                if (a_ret == 0):
-                    print("< input is incorrect >")
-            else:
-                print("< Computer will be skipped. >")
-                skip += 1
-                break
+        else:
+            print("< Computer will be skipped. >")
+            skip += 1
+            break
 
         if (2 <= skip):
             break
@@ -83,9 +59,59 @@ def paly_Othello():
     display_board(board_l)
 
     # 結果表示
-    display_result(board_l)
+    ret = display_result(board_l)
 
     return(ret)
+
+
+# ------------------------------------------------------------------------------
+
+def p_action(board_l, player, mode):
+
+    a_l = []
+    ex_l = ["a,1", "a,2", "a,3", "a,4",
+            "b,1", "b,2", "b,3", "b,4",
+            "c,1", "c,2", "c,3", "c,4",
+            "d,1", "d,2", "d,3", "d,4"]
+    corner_l = ["a,1", "a,4", "d,1", "d,4"]
+
+    # 入力受付
+    if (mode == 10):
+        a_l = random.sample(ex_l, 16)
+    # 角を取る → ランダム
+    elif(mode == 11):
+        a_l = corner_l + random.sample(ex_l, 16)
+
+    print(a_l)
+
+    ret = False
+    for i in range(len(a_l)):
+
+        # アクション選択
+        # 入力受付
+        if (mode == 0):
+            action = input("< Your(○) turn. Please enter. (ex. [a,1]) >\n")
+        # 入力受付
+        elif (mode == 1):
+            action = input("< Computer(●) turn. Please enter. (ex. [a,1]) >\n")
+        # ランダム入力
+        elif(mode == 10):
+            action = a_l[i]
+        # 角を取る → ランダム
+        elif(mode == 11):
+            action = a_l[i]
+
+        # 入力変換
+        act_l = action_chg(action)
+
+        # 入力チェック(自分)
+        ret = action_check(board_l, act_l, player)
+        if (ret != 0):
+            break
+        else:
+            print("< input is incorrect >")
+
+    return (ret)
 
 # ------------------------------------------------------------------------------
 
@@ -288,11 +314,11 @@ def display_result(d_l):
                 p2 += 1
 
     if (p2 < p1):
-        ret = 2
+        ret = 1
         print("You are Win!")
     elif (p1 < p2):
         print("You are lose..")
-        ret = 1
+        ret = 2
     else:
         print("Draw..")
         ret = 0
