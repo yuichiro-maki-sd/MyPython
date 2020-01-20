@@ -86,32 +86,50 @@ def paly_Othello(player1, player2):
 
     # 結果表示
     ret = display_result(board_l)
-    if (int(D_print.D_PLAY) <= int(DBG_PRINT)):
-        if(ret == 1):
+    if int(D_print.D_PLAY) <= int(DBG_PRINT):
+        if ret == 1:
             print("player1 Wins!")
-        elif (ret == 2):
+        elif ret == 2:
             print("player2 Wins!")
         else:
             print("Draw..")
 
     chkprint(p1_last_t)
-    q = 0xFF
-    # 勝った場合、報酬(1)を与える
-    if ((ret == 1) and (len(p1_last_t) != 0)):
-        q = 1
-    # 負けた場合、報酬(-1)を与える
-    elif ((ret == 2) and (len(p1_last_t) != 0)):
-        q = -1
-    # 引き分けた場合、報酬(-1)を与える
-    elif ((ret == 0) and (len(p1_last_t) != 0)):
-        q = -1
+    chkprint(p2_last_t)
+    p1_q = 0xFF
+    p2_q = 0xFF
+    # player1 Wins!
+    if ret == 1:
+        if len(p1_last_t) != 0:
+            p1_q = 1
+        if len(p2_last_t) != 0:
+            p2_q = -1
+    # player2 Wins!
+    elif ret == 2:
+        if len(p1_last_t) != 0:
+            p1_q = -1
+        if len(p2_last_t) != 0:
+            p2_q = 1
+    # Draw
+    else:
+        if len(p1_last_t) != 0:
+            p1_q = -1
+        if len(p2_last_t) != 0:
+            p2_q = 1
 
-    if(q != 0xFF):
+    # プレイヤー1の辞書更新
+    if(p1_q != 0xFF):
         pQ = algo.q_dic.get(p1_last_t, 0)
-        i = algo.alpha * ((q + algo.gamma * 0) - pQ)
-        val = pQ + i
-        chkprint(pQ, i, val)
+        val = pQ + algo.alpha * ((p1_q + algo.gamma * 0) - pQ)
+        chkprint(pQ, val)
         algo.q_dic[p1_last_t] = val
+
+    # プレイヤー2の辞書更新
+    if(p2_q != 0xFF):
+        pQ = algo.q_dic.get(p2_last_t, 0)
+        val = pQ + algo.alpha * ((p2_q + algo.gamma * 0) - pQ)
+        chkprint(pQ, val)
+        algo.q_dic[p2_last_t] = val
 
     # for k, v in algo.q_dic.items():
     #     chkprint(k, v)

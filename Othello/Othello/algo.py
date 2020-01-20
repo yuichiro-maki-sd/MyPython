@@ -26,6 +26,16 @@ alpha = 0.5
 # 割引率（0～1） 0に近いほど目先の報酬を重視する
 gamma = 0.9
 
+# 次ターンの手
+future_act = []
+
+# 角の手リストを作成します
+corner_l = [[0, 0],
+            [(func.board_size), 0],
+            [0, (func.board_size)],
+            [(func.board_size), (func.board_size)]
+            ]
+
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
@@ -211,20 +221,19 @@ def act_ql_act(hit_l, board_l, player):
         board_t = chg_tuple(board_l)
 
         val = 0
-        val_min = 1
         val_max = 0
         for hit_list in hit_l:
             key_st = (board_t, tuple(hit_list))
             val = float(ql_dic.get(str(key_st), 1))
+
+            if int(func.D_print.D_PLAY) <= int(func.DBG_PRINT):
+                print("hit_list:{0}, value:{1}" .format(hit_list, val))
 
             if (val_max < val):
                 val_max = val
                 a_l = hit_list
                 # if(val != 1):
                 #     print("val:", val)
-
-            if (val < val_min):
-                val_min = val
 
         # # 選択可能視手がすべて未評価であった場合
         # if (val_min == 1):
@@ -241,6 +250,7 @@ def act_qlearning(hit_l, board_l, player):
 
     global alpha
     global gamma
+    global future_act
 
     # print("---Q learning start--- player:", player)
 
@@ -251,130 +261,190 @@ def act_qlearning(hit_l, board_l, player):
     a_l = random.choice(hit_l)
 
     last_t = {}
-    if (pl == 0):
 
-        # リストのボード情報をタプルへ変換
-        board_t = chg_tuple(board_l)
+    # リストのボード情報をタプルへ変換
+    board_t = chg_tuple(board_l)
 
+    value = 0
+    val_max = -1
+
+    # 辞書から最善手を探す
+    for hit_list in hit_l:
+
+        # 辞書にない手は、評価値:0（最低評価値）とする
+        value = q_dic.get((board_t, tuple(hit_list)), 0)
+
+        if int(func.D_print.D_PLAY) <= int(func.DBG_PRINT):
+            print("hit_list:{0}, value:{1}" .format(hit_list, value))
+
+        # 入力可能手が1つ
+        if len(hit_l) == 1:
+            a_l = hit_list
+            break
+
+        # 次ターンの手が決まっている場合
+        if future_act == hit_list:
+            a_l = hit_list
+            break
+
+        # 角が取れる場合
+        if judge_corner(hit_list) == True:
+            a_l = hit_list
+            break
+
+        # 未評価の場合
+        if value == 0:
+            a_l = hit_list
+            # a_l = random.choice(hit_l)
+            break
+
+
+        # if val_max < value:
+        #     val_max = value
+        #     a_l = hit_list
+
+    if(int(func.D_print.D_PLAY) <= int(func.DBG_PRINT)):
+        print("a_l:{0}" .format(a_l))
+
+    last_t = (board_t, tuple(a_l))
+
+    # 仮定ボードを作成
+    board_temp_l = copy.deepcopy(board_l)
+
+    # 入力変換
+    action = ("{0},{1}".format(a_l[0], a_l[1]))
+    act_l = func.action_chg(action)
+    # 自分の手を仮ボードに入力
+    ret = func.action_check(board_temp_l, act_l, pl)
+
+    # プレイヤーを入れ替えます
+    pl += 1
+    pl %= 2
+
+    # print("<< board_temp_l:1 >>")
+    # print(pl)
+    # func.display_board(board_temp_l)
+
+    # 相手プレイヤーのアクション選択
+    (end_f, hit_l) = func.board_check(board_temp_l, pl)
+
+    # ゲーム終了なので、処理を抜ける（ここでは辞書更新を行わない）
+    if end_f == True:
+        if(int(func.D_print.D_PLAY) <= int(func.DBG_PRINT)):
+            print("pl:{0}, end_f:{1}" .format(pl, end_f))
+        return (a_l, last_t)
+
+    if len(hit_l) != 0:
+        # # 最初の手を選択
+        # new_a_l = hit_l[0]
+
+        # ランダムで手を選択
+        new_a_l = random.choice(hit_l)
+
+        # Q学習で手を選択
         value = 0
-        val_max = 0
-
-        # 辞書から最善手を探す
+        val_max = -1
+        # リストのボード情報をタプルへ変換
+        board_temp_t = chg_tuple(board_temp_l)
         for hit_list in hit_l:
 
             # 辞書にない手は、評価値:0（最低評価値）とする
-            value = q_dic.get((board_t, tuple(hit_list)), 0)
+            value = q_dic.get((board_temp_t, tuple(hit_list)), 0)
 
             if int(func.D_print.D_PLAY) <= int(func.DBG_PRINT):
                 print("hit_list:{0}, value:{1}" .format(hit_list, value))
 
-            # 未評価の場合
-            if value == 0:
-                # 選択手とする
-                a_l = hit_list
+            # 入力可能手が1つ
+            if len(hit_l) == 1:
+                new_a_l = hit_list
                 break
 
-            if val_max < value:
-                val_max = value
-                a_l = hit_list
+            # 角が取れる場合
+            if judge_corner(hit_list) == True:
+                new_a_l = hit_list
+                break
 
-        last_t = (board_t, tuple(a_l))
+            # 未評価の場合
+            if value == 0:
+                new_a_l = hit_list
+                # new_a_l = random.choice(hit_l)
+                break
 
-        # 仮定ボードを作成
-        board_temp_l = copy.deepcopy(board_l)
+            # if val_max < value:
+            #     val_max = value
+            #     new_a_l = hit_list
 
-        # 入力変換
-        action = ("{0},{1}".format(a_l[0], a_l[1]))
-        act_l = func.action_chg(action)
-        # 自分の手を仮ボードに入力
-        ret = func.action_check(board_temp_l, act_l, pl)
-
-        # プレイヤーを入れ替えます
-        pl += 1
-        pl %= 2
-
-        # print("<< board_temp_l:1 >>")
-        # print(pl)
-        # func.display_board(board_temp_l)
-
-        # 相手プレイヤーのアクション選択
-        (end_f, hit_l) = func.board_check(board_temp_l, pl)
-
-        # ゲーム終了なので、処理を抜ける（ここでは辞書更新を行わない）
-        if end_f == True:
-            if(int(func.D_print.D_PLAY) <= int(func.DBG_PRINT)):
-                print("pl:{0}, end_f:{1}" .format(pl, end_f))
-            return (a_l, last_t)
-
-        if len(hit_l) != 0:
-            # # 最初の手を選択
-            # new_a_l = hit_l[0]
-            # ランダムで手を選択
-            new_a_l = random.choice(hit_l)
-            # 入力変換
-            action = ("{0},{1}".format(new_a_l[0], new_a_l[1]))
-            act_l = func.action_chg(action)
-            # 相手の手を仮ボードに入力
-            ret = func.action_check(board_temp_l, act_l, pl)
-
-        # プレイヤーを入れ替えます
-        pl += 1
-        pl %= 2
-
-        # print("<< board_temp_l:2 >>")
-        # print(pl)
-        # func.display_board(board_temp_l)
-
-        # 自プレイヤーのアクション選択
-        (end_f, hit_l) = func.board_check(board_temp_l, pl)
-
-        # ゲーム終了なので、処理を抜ける（ここでは辞書更新を行わない）
-        if end_f == True:
-            if(int(func.D_print.D_PLAY) <= int(func.DBG_PRINT)):
-                print("pl:{0}, end_f:{1}" .format(pl, end_f))
-            return (a_l, last_t)
-
-        # リストのボード情報をタプルへ変換
-        new_board_t = chg_tuple(board_temp_l)
-
-        # print(new_board_t, tuple(hit_l))
-
-        q_list = []
-        for hit_list in hit_l:
-            # if int(func.D_print.D_PLAY) <= int(func.DBG_PRINT):
-            #     print(new_board_t, tuple(hit_list))
-
-            # 辞書から評価値を得る
-            val = q_dic.get((new_board_t, tuple(hit_list)), 0)
-            q_list.append(val)
-
-        # その上で、もっともよい手を探す
-        max_q_new = -1
-        if len(q_list) != 0:
-            max_q_new = max(q_list)
-
-        # 辞書値取得格納
-        val = q_dic.get(last_t, 0)
-
-        # 辞書値を更新する
-        q = val + alpha * ((0 + gamma * max_q_new) - val)
-        if(q != 0):
-            q_dic[last_t] = q
-            func.chkprint(last_t)
-            func.chkprint(val)
-            func.chkprint(q)
-            func.chkprint(max_q_new)
+        # 手を記憶しておく
+        future_act = new_a_l
 
         if(int(func.D_print.D_PLAY) <= int(func.DBG_PRINT)):
-            print("a_l:{0}, q:{1}" .format(a_l, q))
-        #     # 辞書表示
-        #     for k, v in q_dic.items():
-        #         func.chkprint(k, v)
+            print("new_a_l:{0}" .format(new_a_l))
+
+        # 入力変換
+        action = ("{0},{1}".format(new_a_l[0], new_a_l[1]))
+        act_l = func.action_chg(action)
+        # 相手の手を仮ボードに入力
+        ret = func.action_check(board_temp_l, act_l, pl)
+
+    # プレイヤーを入れ替えます
+    pl += 1
+    pl %= 2
+
+    # print("<< board_temp_l:2 >>")
+    # print(pl)
+    # func.display_board(board_temp_l)
+
+    # 自プレイヤーのアクション選択
+    (end_f, hit_l) = func.board_check(board_temp_l, pl)
+
+    # ゲーム終了なので、処理を抜ける（ここでは辞書更新を行わない）
+    if end_f == True:
+        if(int(func.D_print.D_PLAY) <= int(func.DBG_PRINT)):
+            print("pl:{0}, end_f:{1}" .format(pl, end_f))
+        return (a_l, last_t)
+
+    # リストのボード情報をタプルへ変換
+    new_board_t = chg_tuple(board_temp_l)
+
+    # print(new_board_t, tuple(hit_l))
+
+    q_list = []
+    for hit_list in hit_l:
+        # if int(func.D_print.D_PLAY) <= int(func.DBG_PRINT):
+        #     print(new_board_t, tuple(hit_list))
+
+        # 辞書から評価値を得る
+        val = q_dic.get((new_board_t, tuple(hit_list)), 0)
+        q_list.append(val)
+
+    # その上で、もっともよい手を探す
+    max_q_new = -1
+    if len(q_list) != 0:
+        max_q_new = max(q_list)
+
+    # 辞書値取得格納
+    val = q_dic.get(last_t, 0)
+
+    # 辞書値を更新する
+    q = val + alpha * ((0 + gamma * max_q_new) - val)
+    if(q != 0):
+        q_dic[last_t] = q
+        func.chkprint(last_t)
+        func.chkprint(val)
+        func.chkprint(q)
+        func.chkprint(max_q_new)
+
+    if(int(func.D_print.D_PLAY) <= int(func.DBG_PRINT)):
+        print("a_l:{0}, q:{1}" .format(a_l, q))
+    #     # 辞書表示
+    #     for k, v in q_dic.items():
+    #         func.chkprint(k, v)
 
     # print("---Q learning end  --- player:", player)
 
     return (a_l, last_t)
 
+# ------------------------------------------------------------------------------
 # 辞書用にボード情報をタプルへ変換する
 
 
@@ -391,3 +461,20 @@ def chg_tuple(board_l):
     #     temp_l += line_l
 
     return (tuple(temp_l))
+
+# ------------------------------------------------------------------------------
+# 角の手か確認します
+
+
+def judge_corner(act_l):
+
+    global corner_l
+    ret = False
+
+    for lst in corner_l:
+        if lst == act_l:
+            ret = True
+            # print("corner_l", act_l)
+            break
+
+    return (ret)
